@@ -516,12 +516,10 @@ void main() {
       expect(numBuilds, 2);
       expect(find.byKey(buttonKey), findsNothing);
       expect(find.byKey(scaffoldKey), findsOneWidget);
-      await TestSystemNavigationObserver.handleSystemNavigation(
-        const MethodCall('pushRoute'),
-      );
-      await TestSystemNavigationObserver.handleSystemNavigation(
-        const MethodCall('popRoute'),
-      );
+
+      await tester.sendPlatformPush();
+      await tester.sendPlatformPop();
+
       await tester.pumpAndSettle();
 
       expect(numBuilds, 2);
@@ -531,12 +529,15 @@ void main() {
 
     testWidgets('system back button pops entire flow', (tester) async {
       var systemPopCallCount = 0;
-      SystemChannels.platform.setMockMethodCallHandler((call) {
-        if (call.method == 'SystemNavigator.pop') {
-          systemPopCallCount++;
-        }
-        return null;
-      });
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) {
+          if (call.method == 'SystemNavigator.pop') {
+            systemPopCallCount++;
+          }
+          return null;
+        },
+      );
       const buttonKey = Key('__button__');
       const scaffoldKey = Key('__scaffold__');
       await tester.pumpWidget(
@@ -568,9 +569,7 @@ void main() {
       expect(find.byKey(buttonKey), findsOneWidget);
       expect(find.byKey(scaffoldKey), findsNothing);
 
-      await TestSystemNavigationObserver.handleSystemNavigation(
-        const MethodCall('popRoute'),
-      );
+      await tester.sendPlatformPop();
       await tester.pumpAndSettle();
 
       expect(systemPopCallCount, equals(1));
@@ -579,12 +578,15 @@ void main() {
     testWidgets('system back button pops routes that have been pushed',
         (tester) async {
       var systemPopCallCount = 0;
-      SystemChannels.platform.setMockMethodCallHandler((call) {
-        if (call.method == 'SystemNavigator.pop') {
-          systemPopCallCount++;
-        }
-        return null;
-      });
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) {
+          if (call.method == 'SystemNavigator.pop') {
+            systemPopCallCount++;
+          }
+          return null;
+        },
+      );
       const buttonKey = Key('__button__');
       const scaffoldKey = Key('__scaffold__');
       await tester.pumpWidget(
@@ -628,9 +630,7 @@ void main() {
       expect(find.byKey(buttonKey), findsNothing);
       expect(find.byKey(scaffoldKey), findsOneWidget);
 
-      await TestSystemNavigationObserver.handleSystemNavigation(
-        const MethodCall('popRoute'),
-      );
+      await tester.sendPlatformPop();
       await tester.pumpAndSettle();
 
       expect(systemPopCallCount, equals(0));
@@ -641,12 +641,15 @@ void main() {
     testWidgets('system back button pops typed routes that have been pushed',
         (tester) async {
       var systemPopCallCount = 0;
-      SystemChannels.platform.setMockMethodCallHandler((call) {
-        if (call.method == 'SystemNavigator.pop') {
-          systemPopCallCount++;
-        }
-        return null;
-      });
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) {
+          if (call.method == 'SystemNavigator.pop') {
+            systemPopCallCount++;
+          }
+          return null;
+        },
+      );
       const buttonKey = Key('__button__');
       const scaffoldKey = Key('__scaffold__');
       await tester.pumpWidget(
@@ -690,9 +693,7 @@ void main() {
       expect(find.byKey(buttonKey), findsNothing);
       expect(find.byKey(scaffoldKey), findsOneWidget);
 
-      await TestSystemNavigationObserver.handleSystemNavigation(
-        const MethodCall('popRoute'),
-      );
+      await tester.sendPlatformPop();
       await tester.pumpAndSettle();
 
       expect(systemPopCallCount, equals(0));
@@ -913,12 +914,7 @@ void main() {
         );
         expect(numBuilds, 1);
 
-        await TestSystemNavigationObserver.handleSystemNavigation(
-          const MethodCall(
-            'pushRoute',
-            path,
-          ),
-        );
+        await tester.sendPlatformPush(path);
         await tester.pumpAndSettle();
         expect(observer.lastRoute, path);
         expect(observer.pushCount, 1);
@@ -950,9 +946,7 @@ void main() {
         );
         expect(numBuilds, 1);
 
-        await TestSystemNavigationObserver.handleSystemNavigation(
-          const MethodCall('pushRoute'),
-        );
+        await tester.sendPlatformPush();
         await tester.pumpAndSettle();
         expect(observer.lastRoute, isNull);
         expect(observer.pushCount, 0);
@@ -983,8 +977,12 @@ void main() {
         );
         expect(numBuilds, 1);
 
-        await TestSystemNavigationObserver.handleSystemNavigation(
-          const MethodCall('randomMethod'),
+        await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+          'flutter/navigation',
+          const JSONMethodCodec().encodeMethodCall(
+            const MethodCall('randomMethod'),
+          ),
+          (_) {},
         );
         await tester.pumpAndSettle();
         expect(observer.lastRoute, isNull);
@@ -1054,7 +1052,7 @@ void main() {
       expect(find.byKey(button2Key), findsOneWidget);
     });
 
-    testWidgets('onWillPop pops top page when there are multiple',
+    testWidgets('Navigator.pop pops top page when there are multiple',
         (tester) async {
       const button1Key = Key('__button1__');
       const button2Key = Key('__button2__');
@@ -1075,10 +1073,14 @@ void main() {
                 ),
                 MaterialPage<void>(
                   child: Scaffold(
-                    body: TextButton(
-                      key: button2Key,
-                      child: const Text('Button'),
-                      onPressed: () {},
+                    body: Builder(
+                      builder: (context) {
+                        return TextButton(
+                          key: button2Key,
+                          child: const Text('Button'),
+                          onPressed: () => Navigator.of(context).pop(),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -1091,19 +1093,14 @@ void main() {
       expect(find.byKey(button1Key), findsNothing);
       expect(find.byKey(button2Key), findsOneWidget);
 
-      final willPopScope = tester.widget<WillPopScope>(
-        find.byType(WillPopScope),
-      );
-      final result = await willPopScope.onWillPop!();
-      expect(result, isFalse);
-
+      await tester.tap(find.byKey(button2Key));
       await tester.pumpAndSettle();
 
       expect(find.byKey(button1Key), findsOneWidget);
       expect(find.byKey(button2Key), findsNothing);
     });
 
-    testWidgets('onWillPop does not exist for only one page', (tester) async {
+    testWidgets('PopScope does not exist for only one page', (tester) async {
       const button1Key = Key('__button1__');
       await tester.pumpWidget(
         MaterialApp(
@@ -1127,7 +1124,7 @@ void main() {
       );
 
       expect(find.byKey(button1Key), findsOneWidget);
-      expect(find.byType(WillPopScope), findsNothing);
+      expect(find.byType(PopScope), findsNothing);
     });
 
     testWidgets('controller change triggers a rebuild with correct state',
@@ -1380,33 +1377,29 @@ void main() {
       expect(navigators.last.observers, equals(observers));
     });
 
-    testWidgets('SystemNavigator.pop respects when WillPopScope returns false',
+    testWidgets('SystemNavigator.pop respects PopScope(canPop: false)',
         (tester) async {
       const targetKey = Key('__target__');
-      var onWillPopCallCount = 0;
+      var onPopCallCount = 0;
       final flow = FlowBuilder<int>(
         state: 0,
         onGeneratePages: (state, pages) {
           return <Page<dynamic>>[
             MaterialPage<void>(
               child: Builder(
-                builder: (context) => WillPopScope(
-                  onWillPop: () async {
-                    onWillPopCallCount++;
-                    return false;
-                  },
+                builder: (context) => PopScope(
+                  canPop: false,
+                  onPopInvoked: (_) => onPopCallCount++,
                   child: TextButton(
                     key: targetKey,
                     onPressed: () {
-                      TestSystemNavigationObserver.handleSystemNavigation(
-                        const MethodCall('popRoute'),
-                      );
+                      tester.sendPlatformPop();
                     },
                     child: const SizedBox(),
                   ),
                 ),
               ),
-            )
+            ),
           ];
         },
       );
@@ -1432,37 +1425,34 @@ void main() {
       await tester.tap(find.byKey(targetKey));
       await tester.pumpAndSettle();
 
-      expect(onWillPopCallCount, equals(1));
+      expect(onPopCallCount, equals(1));
       expect(find.byKey(targetKey), findsOneWidget);
     });
 
-    testWidgets('SystemNavigator.pop respects when WillPopScope returns true',
+    testWidgets('SystemNavigator.pop respects PopScope(canPop: true)',
         (tester) async {
       const targetKey = Key('__target__');
-      var onWillPopCallCount = 0;
+      var onPopCallCount = 0;
       final flow = FlowBuilder<int>(
         state: 0,
         onGeneratePages: (state, pages) {
           return <Page<dynamic>>[
             MaterialPage<void>(
               child: Builder(
-                builder: (context) => WillPopScope(
-                  onWillPop: () async {
-                    onWillPopCallCount++;
-                    return true;
+                builder: (context) => PopScope(
+                  onPopInvoked: (_) {
+                    onPopCallCount++;
                   },
                   child: TextButton(
                     key: targetKey,
                     onPressed: () {
-                      TestSystemNavigationObserver.handleSystemNavigation(
-                        const MethodCall('popRoute'),
-                      );
+                      tester.sendPlatformPop();
                     },
                     child: const SizedBox(),
                   ),
                 ),
               ),
-            )
+            ),
           ];
         },
       );
@@ -1488,7 +1478,7 @@ void main() {
       await tester.tap(find.byKey(targetKey));
       await tester.pumpAndSettle();
 
-      expect(onWillPopCallCount, equals(1));
+      expect(onPopCallCount, equals(1));
       expect(find.byKey(targetKey), findsNothing);
     });
 
@@ -1556,5 +1546,26 @@ class _TestPushWidgetsBindingObserver with WidgetsBindingObserver {
     lastRoute = route;
     pushCount++;
     return true;
+  }
+}
+
+extension WidgetTesterX on WidgetTester {
+  Future<void> sendPlatformPop() async {
+    final message = const JSONMethodCodec().encodeMethodCall(
+      const MethodCall('popRoute'),
+    );
+    await _sendSystemNavigationMessage(message);
+  }
+
+  Future<void> sendPlatformPush([String? route]) async {
+    final message = const JSONMethodCodec().encodeMethodCall(
+      MethodCall('pushRoute', route),
+    );
+    await _sendSystemNavigationMessage(message);
+  }
+
+  Future<void> _sendSystemNavigationMessage(ByteData message) async {
+    await binding.defaultBinaryMessenger
+        .handlePlatformMessage('flutter/navigation', message, (_) {});
   }
 }

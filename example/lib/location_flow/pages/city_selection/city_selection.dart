@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class CitySelection extends StatelessWidget {
-  const CitySelection({super.key, required this.state});
+  const CitySelection({required this.state, super.key});
 
   static MaterialPage<void> page({required String state}) {
     return MaterialPage<void>(child: CitySelection(state: state));
@@ -43,7 +43,7 @@ class CitySelectionForm extends StatelessWidget {
                   case LocationStatus.loading:
                     return const LoadingIndicator();
                   case LocationStatus.success:
-                    return DropdownMenu(
+                    return Dropdown(
                       hint: const Text('Select a City'),
                       items: state.locations,
                       value: state.selectedLocation,

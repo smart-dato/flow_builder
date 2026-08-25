@@ -1,3 +1,17 @@
+# 0.1.0
+
+- **BREAKING**: replace deprecated `WillPopScope` with `PopScope`
+  - refactor: update dart sdk constrant to `>=3.2.0`
+  - refactor: update flutter constraint to `>=3.16.0`
+- refactor: update lint rules
+- chore: update copyright year
+- chore: update example (including native platforms)
+
+# 0.0.10
+
+- feat: add optional `clipBehavior` ([#113](https://github.com/felangel/flow_builder/pull/113))
+- refactor: update to Flutter 3.13.9
+
 # 0.0.9
 
 - fix: cannot pop with Android back button

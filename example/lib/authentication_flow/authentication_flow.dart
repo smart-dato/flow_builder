@@ -129,7 +129,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 }
 
 class OnboardingStep extends StatelessWidget {
-  const OnboardingStep({super.key, required this.step});
+  const OnboardingStep({required this.step, super.key});
 
   static Page<void> page(int step) {
     return MaterialPage<void>(child: OnboardingStep(step: step));
@@ -144,7 +144,7 @@ class OnboardingStep extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Step $step', style: theme.textTheme.headline1),
+          Text('Step $step', style: theme.textTheme.displayLarge),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -159,7 +159,7 @@ class OnboardingStep extends StatelessWidget {
                 onPressed: () {
                   context.flow<int>().update((s) => s + 1);
                 },
-              )
+              ),
             ],
           ),
         ],
@@ -183,7 +183,7 @@ class HomePage extends StatelessWidget {
             onPressed: () {
               context.read<AuthenticationCubit>().logout();
             },
-          )
+          ),
         ],
       ),
       body: const Center(child: Text('Home')),
